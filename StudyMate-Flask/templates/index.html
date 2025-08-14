@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StudyMate (Flask)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .chunk { white-space: pre-wrap; font-size: 0.95rem; }
+    .card { padding: 1rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .muted { color: #666; }
+  </style>
+</head>
+<body class="container">
+  <header>
+    <h1>📚 StudyMate — PDF Q&amp;A (Flask)</h1>
+    <p class="muted">Upload one or more PDFs, then ask questions grounded in your documents.</p>
+  </header>
+
+  <main>
+    <section class="grid">
+      <article class="card">
+        <h3>1) Upload PDFs</h3>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+          <input type="file" name="pdfs" accept="application/pdf" multiple required />
+          <button type="submit">Upload &amp; Index</button>
+        </form>
+        {% if stats %}
+          <p class="muted">Indexed: <strong>{{stats.documents}}</strong> document(s), <strong>{{stats.chunks}}</strong> chunks.</p>
+        {% endif %}
+      </article>
+
+      <article class="card">
+        <h3>2) Ask a question</h3>
+        <form action="/ask" method="post">
+          <input name="question" placeholder="e.g., Explain classification vs regression" required />
+          <button type="submit">Ask</button>
+        </form>
+        <p class="muted">Answers are generated with IBM watsonx (Mixtral-8x7B-Instruct) using retrieved context.</p>
+      </article>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section>
+          {% for category, message in messages %}
+            <article class="card" style="border-left: 6px solid {% if category=='success' %}#3fb950{% elif category=='danger' %}#d1242f{% else %}#6e7781{% endif %};">
+              <strong style="text-transform: capitalize;">{{category}}</strong>: {{message}}
+            </article>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <section>
+      <h3>3) Q&amp;A History</h3>
+      {% if history %}
+        {% for h in history[::-1] %}
+        <article class="card">
+          <header><strong>{{h.ts}}</strong></header>
+          <p><strong>Q:</strong> {{h.question}}</p>
+          <p><strong>A:</strong> {{h.answer}}</p>
+          <details>
+            <summary>Referenced Paragraphs</summary>
+            {% for c in h.contexts %}
+              <p class="chunk"><em>Source:</em> {{c.source}}<br>{{c.text}}</p>
+            {% endfor %}
+          </details>
+        </article>
+        {% endfor %}
+        <a role="button" href="/download">⬇️ Download Q&amp;A Transcript</a>
+      {% else %}
+        <p class="muted">No questions asked yet.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <footer class="muted">
+    <small>Built for local use. Do not share your IBM keys publicly.</small>
+  </footer>
+</body>
+</html>
